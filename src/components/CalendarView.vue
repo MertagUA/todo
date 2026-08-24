@@ -7,6 +7,7 @@ import { t } from '../i18n.js'
 import {
   state, actions, eventsOn, tasksPlannedOn, tasksDueOn, projectById,
 } from '../store/store.js'
+import { useViewport } from '../useViewport.js'
 import {
   weekDatesISO, formatWeekRange, formatDayLong, weekdayShort, dayNumber,
   isWeekend, todayISO, timeToMinutes, minutesToTime, formatTimeRange, formatDuration,
@@ -17,11 +18,15 @@ const HOUR_HEIGHT = 52          // px per hour
 const UNKNOWN_MINUTES = 30      // block height used when a length is unknown
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
+const { isPhone } = useViewport()
 const grid = ref(null)
 const eventDialog = ref(null)   // { event } | { date, time }
 const planDialog = ref(null)    // { date }
 
-const mode = computed(() => state.ui.calendarMode)
+// A seven-column hour grid is unreadable on a phone, so week falls back to day.
+const mode = computed(() =>
+  isPhone.value && state.ui.calendarMode === 'week' ? 'day' : state.ui.calendarMode,
+)
 
 const days = computed(() =>
   mode.value === 'day' ? [state.ui.anchor] : weekDatesISO(state.ui.anchor),
@@ -167,6 +172,7 @@ function openTask(id) {
             @click="actions.setCalendarMode('month')"
           >{{ t.calendar.month }}</button>
           <button
+            v-if="!isPhone"
             class="mode"
             :class="{ 'mode--on': mode === 'week' }"
             @click="actions.setCalendarMode('week')"
@@ -632,5 +638,24 @@ function openTask(id) {
 
 @media (max-width: 860px) {
   .cal__top, .cal__grid { grid-template-columns: 44px repeat(var(--cols), minmax(64px, 1fr)); }
+}
+
+@media (max-width: 700px) {
+  .cal__head { padding: 12px 14px 10px; }
+  .cal__title h1 { font-size: 17px; }
+  .cal__range { font-size: 12px; }
+  .cal__tools { gap: 6px; }
+  .nav__btn, .nav__today, .mode { height: 32px; }
+  .month__grid { grid-auto-rows: minmax(74px, 1fr); }
+  .month__names span { padding: 6px 4px; font-size: 10px; }
+  .cell { padding: 3px; }
+  .cell__num { min-width: 20px; height: 20px; font-size: 11.5px; }
+  .cell__add { opacity: 1; }
+  .chipline { font-size: 9.5px; gap: 3px; padding: 1px 3px; }
+  .chipline__time { display: none; }
+  .allday__add { opacity: 1; }
+  .daycol { padding: 5px 4px 6px; }
+  .event { padding: 3px 5px; }
+  .event__title { font-size: 11.5px; }
 }
 </style>

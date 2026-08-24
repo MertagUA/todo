@@ -445,4 +445,13 @@ watch(
 }
 .stamps div { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
 .stamps dt, .stamps dd { margin: 0; }
+
+@media (max-width: 700px) {
+  .detail { width: 100%; }
+  .head { padding: 10px 12px; }
+  .scroll { padding: 14px; }
+  .mini { padding: 7px 12px; font-size: 13px; }
+  .day { height: 34px; }
+  .seg { padding: 9px 10px; }
+}
 </style>

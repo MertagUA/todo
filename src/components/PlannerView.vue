@@ -2,12 +2,13 @@
 import { ref, computed } from 'vue'
 import AppIcon from './AppIcon.vue'
 import PlanDialog from './PlanDialog.vue'
-import ExtendPlanMenu from './ExtendPlanMenu.vue'
+import TaskPlanMenu from './TaskPlanMenu.vue'
 import { t } from '../i18n.js'
 import {
   state, actions, activeProjects, projectById,
   tasksPlannedOn, unplannedTasks, PRIORITIES,
 } from '../store/store.js'
+import { useViewport } from '../useViewport.js'
 import {
   weekDatesISO, formatWeekRange, weekdayShort, dayNumber,
   isWeekend, todayISO, formatDue, isOverdue, formatRepeat,
@@ -17,7 +18,9 @@ const dragging = ref(null)        // { id, from: iso | null }
 const dropTarget = ref(null)      // iso | 'pool'
 const planDialog = ref(null)      // { date }
 const search = ref('')
-const extendFor = ref(null)      // `${taskId}|${iso}` of the open "stretch" menu
+const extendFor = ref(null)
+const { isPhone } = useViewport()
+const poolOpen = ref(true)      // `${taskId}|${iso}` of the open "stretch" menu
 const projectFilter = ref('all')
 
 const week = computed(() => weekDatesISO(state.ui.anchor))
@@ -95,7 +98,12 @@ function onDrop(target) {
             <AppIcon name="chevron" :size="15" />
           </button>
         </div>
-        <p class="hint">{{ t.planner.poolHint }}</p>
+        <button v-if="isPhone" class="pool-toggle" @click="poolOpen = !poolOpen">
+          <AppIcon name="inbox" :size="14" />
+          {{ t.planner.pool }} · {{ pool.length }}
+          <AppIcon name="chevron" :size="13" class="caret" :class="{ 'caret--open': poolOpen }" />
+        </button>
+        <p v-else class="hint">{{ t.planner.poolHint }}</p>
       </div>
     </header>
 
@@ -172,20 +180,13 @@ function onDrop(target) {
               <div class="card__tools" @click.stop>
                 <button
                   class="card__tool"
-                  :title="t.planner.extend"
+                  :title="t.planner.moveTo"
                   @click="extendFor = extendFor === extendKey(task.id, iso) ? null : extendKey(task.id, iso)"
                 >
-                  <AppIcon name="right" :size="12" />
-                </button>
-                <button
-                  class="card__tool card__tool--danger"
-                  :title="t.planner.removeFromDay"
-                  @click="actions.unplanTask(task.id, iso)"
-                >
-                  <AppIcon name="close" :size="12" />
+                  <AppIcon name="dots" :size="13" />
                 </button>
 
-                <ExtendPlanMenu
+                <TaskPlanMenu
                   v-if="extendFor === extendKey(task.id, iso)"
                   :task-id="task.id"
                   :from="iso"
@@ -201,13 +202,14 @@ function onDrop(target) {
       </div>
 
       <aside
+        v-if="!isPhone || poolOpen"
         class="pool"
         :class="{ 'pool--drop': dropTarget === 'pool' }"
         @dragover="onDragOver('pool', $event)"
         @dragleave="dropTarget === 'pool' && (dropTarget = null)"
         @drop.prevent="onDrop('pool')"
       >
-        <header class="pool__head">
+        <header v-if="!isPhone" class="pool__head">
           <AppIcon name="inbox" :size="15" />
           <h2>{{ t.planner.pool }}</h2>
           <span class="pool__count">{{ pool.length }}</span>
@@ -382,7 +384,7 @@ function onDrop(target) {
 .card__grip { flex: none; margin-top: 1px; color: var(--fg-subtle); }
 .card--pool .card__body { padding-right: 0; }
 
-.card__body { flex: 1; min-width: 0; padding-right: 34px; }
+.card__body { flex: 1; min-width: 0; padding-right: 22px; }
 .card__title { display: block; font-size: 12.5px; font-weight: 550; line-height: 1.35; overflow-wrap: anywhere; }
 .card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 5px; }
 .tagchip {
@@ -456,5 +458,41 @@ function onDrop(target) {
   .board { flex-direction: column; }
   .pool { width: auto; border-left: 0; border-top: 1px solid var(--border); max-height: 40%; }
   .days { grid-template-columns: repeat(7, minmax(140px, 1fr)); }
+}
+
+/* --- phone: one day fills the screen, swipe sideways --- */
+.pool-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--fg-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.caret { transition: transform 0.15s; }
+.caret--open { transform: rotate(90deg); }
+
+@media (max-width: 700px) {
+  .head { padding: 12px 14px 10px; }
+  .head__title h1 { font-size: 17px; }
+  .days {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 84vw;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+  }
+  .day { scroll-snap-align: start; }
+  .day__add { opacity: 1; }
+  .card { padding: 10px; }
+  .card__title { font-size: 13.5px; }
+  .card__tool { opacity: 1; width: 26px; height: 26px; }
+  .card__body { padding-right: 28px; }
+  .pool { max-height: 46vh; }
 }
 </style>

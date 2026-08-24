@@ -8,13 +8,21 @@ import TaskDetail from './components/TaskDetail.vue'
 import AppIcon from './components/AppIcon.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import { state, actions, selectedTask } from './store/store.js'
+import { useViewport } from './useViewport.js'
 import { formatDue } from './utils/date.js'
 import { t } from './i18n.js'
 
 const listRef = ref(null)
-const narrow = ref(window.innerWidth < 900)
+const { isPhone, isNarrow: narrow } = useViewport()
 
 const sidebarVisible = computed(() => state.ui.sidebarOpen || !narrow.value)
+
+/** Which bottom-bar item is lit on a phone. */
+const activeTab = computed(() => {
+  const kind = state.ui.view.kind
+  if (kind === 'calendar' || kind === 'planner') return kind
+  return 'tasks'
+})
 
 // A repeating task that rolls forward announces itself for a few seconds.
 let rollTimer = null
@@ -50,10 +58,6 @@ const confirmCopy = computed(() => {
   }
 })
 
-function onResize() {
-  narrow.value = window.innerWidth < 900
-}
-
 function onKey(e) {
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)
   if (e.key === 'Escape') {
@@ -72,18 +76,16 @@ function onKey(e) {
   }
 }
 
-onMounted(() => {
-  window.addEventListener('keydown', onKey)
-  window.addEventListener('resize', onResize)
-})
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onKey)
-  window.removeEventListener('resize', onResize)
-})
+onMounted(() => window.addEventListener('keydown', onKey))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+
+function openTasks() {
+  if (state.ui.view.kind === 'calendar' || state.ui.view.kind === 'planner') actions.selectSmart('today')
+}
 </script>
 
 <template>
-  <div class="app" :class="{ 'app--narrow': narrow }">
+  <div class="app" :class="{ 'app--narrow': narrow, 'app--phone': isPhone }">
     <Transition name="fade">
       <div v-if="narrow && state.ui.sidebarOpen" class="scrim" @click="state.ui.sidebarOpen = false" />
     </Transition>
@@ -93,7 +95,11 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="app__center">
-      <button v-if="narrow" class="burger btn btn--ghost btn--icon" @click="state.ui.sidebarOpen = !state.ui.sidebarOpen">
+      <button
+        v-if="narrow && !isPhone"
+        class="burger btn btn--ghost btn--icon"
+        @click="state.ui.sidebarOpen = !state.ui.sidebarOpen"
+      >
         <AppIcon name="menu" />
       </button>
       <CalendarView v-if="state.ui.view.kind === 'calendar'" />
@@ -129,6 +135,26 @@ onBeforeUnmount(() => {
     <Transition name="slide">
       <TaskDetail v-if="selectedTask" :key="selectedTask.id" :task="selectedTask" class="app__detail" />
     </Transition>
+
+    <!-- phone navigation -->
+    <nav v-if="isPhone" class="tabs">
+      <button class="tab" :class="{ 'tab--on': activeTab === 'tasks' }" @click="openTasks()">
+        <AppIcon name="check" :size="19" />
+        <span>{{ t.nav.tasks }}</span>
+      </button>
+      <button class="tab" :class="{ 'tab--on': activeTab === 'calendar' }" @click="actions.selectCalendar()">
+        <AppIcon name="calendar" :size="19" />
+        <span>{{ t.nav.calendar }}</span>
+      </button>
+      <button class="tab" :class="{ 'tab--on': activeTab === 'planner' }" @click="actions.selectPlanner()">
+        <AppIcon name="board" :size="19" />
+        <span>{{ t.nav.planner }}</span>
+      </button>
+      <button class="tab" @click="state.ui.sidebarOpen = true">
+        <AppIcon name="menu" :size="19" />
+        <span>{{ t.nav.menu }}</span>
+      </button>
+    </nav>
   </div>
 </template>
 
@@ -218,4 +244,36 @@ onBeforeUnmount(() => {
   width: min(360px, 100%);
   box-shadow: var(--shadow-lg);
 }
+
+/* --- phone shell --- */
+.app--phone .app__center { padding-bottom: calc(58px + env(safe-area-inset-bottom)); }
+.app--phone .app__side { width: min(88vw, 320px); }
+.app--phone .app__detail { width: 100%; padding-bottom: env(safe-area-inset-bottom); }
+.app--phone .toast { bottom: calc(70px + env(safe-area-inset-bottom)); }
+
+.tabs {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 33;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+  backdrop-filter: blur(12px);
+}
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px 9px;
+  border: 0;
+  background: none;
+  color: var(--fg-subtle);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.tab--on { color: var(--accent); }
+.tab:active { background: var(--bg-hover); }
 </style>

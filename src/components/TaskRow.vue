@@ -166,7 +166,9 @@ const dueClass = computed(() => {
 .tool:hover { background: var(--bg-hover); color: var(--fg); }
 .tool--danger:hover { background: var(--danger-soft); color: var(--danger); }
 
-@media (max-width: 720px) {
+@media (max-width: 720px), (hover: none) {
   .tools { opacity: 1; }
+  .tool { width: 30px; height: 30px; }
+  .task { padding: 12px; }
 }
 </style>

@@ -349,6 +349,12 @@ async function importData(event) {
   line-height: 1.5;
 }
 
+@media (max-width: 700px) {
+  .row { padding: 11px 12px; }
+  .row__more { opacity: 1; width: 30px; height: 30px; }
+  .sidebar { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+}
+
 .foot {
   display: flex;
   gap: 2px;

@@ -31,6 +31,14 @@ export const t = {
     done: 'Виконані',
   },
 
+  nav: {
+    tasks: 'Завдання',
+    calendar: 'Календар',
+    planner: 'Планер',
+    menu: 'Меню',
+    back: 'Назад',
+  },
+
   sidebar: {
     projects: 'Проєкти',
     archived: 'Архів',
@@ -159,6 +167,8 @@ export const t = {
     plannedCount: (n) => `${n} ${plural(n, ['завдання', 'завдання', 'завдань'])}`,
     weekLoad: 'Навантаження тижня',
     extend: 'Робити й наступні дні',
+    moveTo: 'Перенести на день',
+    moveTitle: 'Перенести на',
     extendTitle: 'Продовжити на',
     clearPlan: 'Прибрати всі дні',
   },
