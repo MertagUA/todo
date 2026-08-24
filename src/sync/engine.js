@@ -16,6 +16,7 @@ function describe(error) {
   const message = error?.message || String(error || '')
   const code = error?.code || ''
   const map = [
+    [/logins? (are )?disabled|provider is (not enabled|disabled)/i, t.sync.errors.loginsDisabled],
     [/signups? (are )?disabled/i, t.sync.errors.signupsDisabled],
     [/invalid login credentials/i, t.sync.errors.invalidCredentials],
     [/email not confirmed/i, t.sync.errors.notConfirmed],

@@ -11,7 +11,8 @@
     "stop": "pkill -f scripts/serve.mjs || true",
     "app": "bash scripts/install-app.sh",
     "deploy": "bash scripts/deploy.sh",
-    "setup-sync": "node scripts/setup-sync.mjs"
+    "setup-sync": "node scripts/setup-sync.mjs",
+    "check-sync": "node scripts/check-sync.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",

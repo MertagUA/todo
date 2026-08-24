@@ -237,6 +237,9 @@ export const t = {
     lastSync: 'Востаннє',
     never: 'ще не було',
     errors: {
+      loginsDisabled:
+        'Провайдер Email вимкнено у Supabase. Authentication → Sign In / Providers → Email → ' +
+        'увімкнути сам провайдер (перемикач угорі блоку) → Save.',
       signupsDisabled:
         'Реєстрацію вимкнено в налаштуваннях Supabase. Або увімкни «Allow new users to sign up» ' +
         '(Authentication → Sign In / Providers → Email), або створи користувача вручну: ' +

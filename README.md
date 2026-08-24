@@ -163,10 +163,32 @@ alter publication supabase_realtime add table public.app_state;
 
 Політика `own row only` — це те, що не дає одному акаунту побачити дані іншого.
 
-### 3. Вимкнути підтвердження пошти (щоб не морочитись)
+### 3. Налаштувати вхід
 
-Supabase → **Authentication → Sign In / Providers → Email** → вимкнути
-**Confirm email** → Save. Тоді акаунт працює одразу після реєстрації.
+Supabase → **Authentication → Sign In / Providers**. Там три різні перемикачі,
+які легко переплутати:
+
+| Перемикач | Має бути | Якщо не так |
+| --- | --- | --- |
+| **Email** (сам провайдер, угорі блоку Email) | увімкнено | «Email logins are disabled» |
+| **Allow new users to sign up** (блок User Signups) | увімкнено, поки реєструєтесь | «Email signups are disabled» |
+| **Confirm email** (усередині блоку Email) | вимкнено | після реєстрації чекаєш листа |
+
+Після того, як обидва акаунти створені, «Allow new users to sign up» можна вимкнути —
+тоді чужі не зареєструються у твоєму проєкті.
+
+Альтернатива без реєстрації взагалі: **Authentication → Users → Add user →
+Create new user**, пошта + пароль + галочка **Auto Confirm User**. У застосунку
+тоді тиснеш «Увійти».
+
+**Перевірити, що все виставлено правильно:**
+
+```bash
+npm run check-sync
+```
+
+Скрипт читає налаштування проєкту й каже, що саме ще треба ввімкнути чи вимкнути,
+а заразом перевіряє таблицю `app_state` і те, що RLS справді закриває чужі дані.
 
 ### 4. Вставити ключі
 
@@ -316,6 +338,8 @@ scripts/
   make-icon.mjs            малює build/icon.png попіксельно
   install-app.sh           збирає і ставить ~/Applications/Завдання.app
   deploy.sh                публікує на GitHub Pages і вмикає його
+  setup-sync.mjs           записує ключі Supabase у .env.local
+  check-sync.mjs           перевіряє налаштування входу, таблицю й RLS
 ```
 
 ## Якщо ти новачок у Vue 3 — читай у такому порядку
