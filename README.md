@@ -170,16 +170,36 @@ Supabase → **Authentication → Sign In / Providers → Email** → вимкн
 
 ### 4. Вставити ключі
 
-Supabase → **Project Settings → API**. Скопіювати `Project URL` і ключ `anon public`.
-У теці проєкту створити файл `.env.local`:
+Найпростіше — запустити у теці проєкту:
 
-```
-VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
+```bash
+npm run setup-sync
 ```
 
-`.env.local` не потрапляє в git. Ключ `anon` публічний за задумом — доступ до даних
-дає не він, а вхід в акаунт і політика RLS вище.
+Скрипт запитає два значення, перевірить їх і сам створить файл `.env.local`.
+Якщо значення вже під рукою, можна одразу:
+
+```bash
+npm run setup-sync -- https://xxxx.supabase.co eyJhbGciOi...
+```
+
+**Де ці два значення в Supabase:**
+
+1. Відкрий проєкт на [supabase.com/dashboard](https://supabase.com/dashboard).
+2. Ліворуч **унизу** — шестерня **Project Settings**.
+3. Пункт **Data API** (у старіших дашбордах просто **API**) — там угорі рядок
+   **Project URL**, виглядає як `https://abcdefghijkl.supabase.co`.
+4. Пункт **API Keys** (у старіших — той самий екран, блок *Project API keys*) —
+   бери ключ з підписом **anon · public** або **Publishable key**. Він довгий,
+   починається з `eyJ` або з `sb_publishable_`.
+
+Пряме посилання на цей екран: `https://supabase.com/dashboard/project/_/settings/api`
+
+> Ключ **service_role** / **secret** брати не можна — він дає повний доступ до бази
+> в обхід усіх правил. Скрипт такий ключ відхилить.
+
+Ключ `anon` публічний за задумом: він лише каже, до якого проєкту стукати. Доступ
+до даних дає вхід в акаунт і політика RLS з кроку 2.
 
 ### 5. Опублікувати
 
