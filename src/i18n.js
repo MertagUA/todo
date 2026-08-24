@@ -236,6 +236,22 @@ export const t = {
     statusOffline: 'Немає мережі — збережу локально',
     lastSync: 'Востаннє',
     never: 'ще не було',
+    errors: {
+      signupsDisabled:
+        'Реєстрацію вимкнено в налаштуваннях Supabase. Або увімкни «Allow new users to sign up» ' +
+        '(Authentication → Sign In / Providers → Email), або створи користувача вручну: ' +
+        'Authentication → Users → Add user, і тоді тисни «Увійти».',
+      invalidCredentials: 'Невірна пошта або пароль.',
+      notConfirmed:
+        'Пошту не підтверджено. Або підтверди листа, або вимкни «Confirm email» ' +
+        'у Supabase → Authentication → Sign In / Providers → Email.',
+      alreadyRegistered: 'Такий акаунт уже існує — тисни «Увійти».',
+      weakPassword: 'Пароль має бути щонайменше 6 символів.',
+      rateLimit: 'Забагато спроб поспіль. Спробуй за хвилину.',
+      network: 'Немає звʼязку з Supabase. Перевір інтернет.',
+      tableMissing:
+        'У базі немає таблиці app_state. Виконай SQL з README (розділ «Синхронізація», крок 2).',
+    },
     explain:
       'Дані зливаються за часом зміни: правки з обох пристроїв зберігаються, ' +
       'а якщо одне й те саме завдання змінене двічі — лишається новіша версія. ' +

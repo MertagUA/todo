@@ -9,6 +9,25 @@ import { reactive, watch } from 'vue'
 import { getClient, isConfigured, TABLE } from './client.js'
 import { mergeSnapshots, snapshotSignature } from './merge.js'
 import { state, actions } from '../store/store.js'
+import { t } from '../i18n.js'
+
+/** Supabase speaks English; say the same thing in Ukrainian, with the fix. */
+function describe(error) {
+  const message = error?.message || String(error || '')
+  const code = error?.code || ''
+  const map = [
+    [/signups? (are )?disabled/i, t.sync.errors.signupsDisabled],
+    [/invalid login credentials/i, t.sync.errors.invalidCredentials],
+    [/email not confirmed/i, t.sync.errors.notConfirmed],
+    [/already registered|user already exists/i, t.sync.errors.alreadyRegistered],
+    [/password should be at least/i, t.sync.errors.weakPassword],
+    [/rate limit|too many requests/i, t.sync.errors.rateLimit],
+    [/failed to fetch|networkerror|load failed/i, t.sync.errors.network],
+    [/relation .*app_state.* does not exist|schema cache/i, t.sync.errors.tableMissing],
+  ]
+  const hit = map.find(([re]) => re.test(message) || re.test(code))
+  return hit ? hit[1] : message
+}
 
 export const sync = reactive({
   configured: isConfigured,
@@ -27,7 +46,7 @@ let channel = null
 
 function fail(error) {
   sync.status = navigator.onLine === false ? 'offline' : 'error'
-  sync.error = error?.message || String(error)
+  sync.error = describe(error)
 }
 
 async function pull() {
@@ -109,7 +128,7 @@ export async function signIn(email, password) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
   } catch (error) {
-    sync.error = error?.message || String(error)
+    sync.error = describe(error)
   } finally {
     sync.busy = false
   }
@@ -122,7 +141,7 @@ export async function signUp(email, password) {
     const { error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
   } catch (error) {
-    sync.error = error?.message || String(error)
+    sync.error = describe(error)
   } finally {
     sync.busy = false
   }
