@@ -21,9 +21,28 @@ fi
 echo "==> Збираю"
 npm run build >/dev/null
 
-if grep -rqE "sb_secret_|service_role|SUPABASE_SERVICE" dist 2>/dev/null; then
-  echo "✗ У зібраному бандлі знайдено секретний ключ. Публікацію скасовано."
-  echo "  У .env.local має бути ключ anon / publishable, а не service_role."
+# Only real secret *values* matter here — the string "service_role" also appears
+# inside the Supabase library itself, which is harmless.
+if grep -rqE "sb_secret_[A-Za-z0-9_-]{8,}" dist 2>/dev/null; then
+  echo "✗ У зібраному бандлі знайдено секретний ключ (sb_secret_…). Публікацію скасовано."
+  exit 1
+fi
+
+if [ -f .env.local ] && node -e '
+  const fs = require("fs")
+  const line = fs.readFileSync(".env.local", "utf8").match(/VITE_SUPABASE_ANON_KEY=(.+)/)
+  const key = line ? line[1].trim() : ""
+  if (key.startsWith("sb_secret_")) process.exit(0)
+  if (key.startsWith("eyJ")) {
+    try {
+      const payload = JSON.parse(Buffer.from(key.split(".")[1], "base64").toString())
+      if (payload.role === "service_role") process.exit(0)
+    } catch {}
+  }
+  process.exit(1)
+'; then
+  echo "✗ У .env.local лежить секретний ключ (service_role). Публікацію скасовано."
+  echo "  Постав ключ anon / publishable: npm run setup-sync"
   exit 1
 fi
 
