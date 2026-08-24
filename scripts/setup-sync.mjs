@@ -12,17 +12,41 @@ import { join } from 'node:path'
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const ENV_FILE = join(ROOT, '.env.local')
 
-const URL_RE = /^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i
 // Older projects show a JWT ("anon public"), newer ones a publishable key.
 const KEY_RE = /^(eyJ[\w-]+\.[\w-]+\.[\w-]+|sb_publishable_[\w-]+)$/
 
 function clean(value) {
-  return String(value || '').trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '')
+  return String(value || '').trim().replace(/^["']|["']$/g, '')
 }
 
-let [url, key] = process.argv.slice(2).map(clean)
+/**
+ * Accepts whatever the dashboard put on the clipboard: the API URL, the same
+ * URL with a path, a bare hostname, or even the dashboard link — which carries
+ * the project ref and can be turned into the API URL.
+ */
+function normalizeUrl(raw) {
+  let value = clean(raw).replace(/\/+$/, '')
+  if (!value) return null
+  if (!/^https?:\/\//i.test(value)) value = `https://${value}`
 
-if (!url || !key) {
+  let parsed
+  try {
+    parsed = new URL(value)
+  } catch {
+    return null
+  }
+
+  if (/^(www\.)?supabase\.(com|io)$/i.test(parsed.hostname)) {
+    const ref = parsed.pathname.match(/\/project\/([a-z0-9]{16,})/i)
+    return ref ? `https://${ref[1]}.supabase.co` : null
+  }
+
+  return `https://${parsed.hostname}`   // drops /rest/v1 and friends
+}
+
+let [rawUrl, key] = process.argv.slice(2).map(clean)
+
+if (!rawUrl || !key) {
   console.log(`
 Де взяти ці два значення
 ------------------------
@@ -38,15 +62,28 @@ if (!url || !key) {
 `)
 }
 
-const rl = !url || !key ? createInterface({ input: stdin, output: stdout }) : null
-if (!url) url = clean(await rl.question('Project URL: '))
+const rl = !rawUrl || !key ? createInterface({ input: stdin, output: stdout }) : null
+if (!rawUrl) rawUrl = clean(await rl.question('Project URL: '))
 if (!key) key = clean(await rl.question('anon / publishable key: '))
 rl?.close()
 
-if (!URL_RE.test(url)) {
-  console.error(`\n✗ Project URL виглядає дивно: "${url}"`)
-  console.error('  Має бути схоже на https://abcdefghijkl.supabase.co')
+const url = normalizeUrl(rawUrl)
+
+if (!url) {
+  console.error(`\n✗ Не зрозумів адресу: "${rawUrl}"`)
+  console.error('  Підійде будь-що з цього:')
+  console.error('    https://abcdefghijklmnop.supabase.co')
+  console.error('    abcdefghijklmnop.supabase.co')
+  console.error('    https://supabase.com/dashboard/project/abcdefghijklmnop  (посилання з браузера)')
   process.exit(1)
+}
+
+if (url !== clean(rawUrl).replace(/\/+$/, '')) {
+  console.log(`\nВикористаю: ${url}`)
+}
+
+if (!/\.supabase\.(co|in)$/i.test(new URL(url).hostname)) {
+  console.log('\n! Це не схоже на стандартний домен Supabase — перевірю звʼязок нижче.')
 }
 if (!KEY_RE.test(key)) {
   console.error('\n✗ Ключ виглядає дивно. Має починатися з "eyJ" або "sb_publishable_".')
@@ -56,6 +93,29 @@ if (!KEY_RE.test(key)) {
 if (/service_role|sb_secret/i.test(key)) {
   console.error('\n✗ Це секретний ключ. Візьми anon / publishable.')
   process.exit(1)
+}
+
+// A quick live check beats discovering a typo after a deploy.
+process.stdout.write('\nПеревіряю звʼязок з проєктом… ')
+try {
+  const response = await fetch(`${url}/auth/v1/health`, {
+    headers: { apikey: key },
+    signal: AbortSignal.timeout(10000),
+  })
+  if (response.ok) {
+    console.log('✓ проєкт відповідає')
+  } else if (response.status === 401 || response.status === 403) {
+    console.log('✗')
+    console.error(`\n✗ Проєкт знайдено, але ключ він не приймає (HTTP ${response.status}).`)
+    console.error('  Схоже, ключ від іншого проєкту або це не anon/publishable.')
+    process.exit(1)
+  } else {
+    console.log(`? відповів HTTP ${response.status} — записую як є`)
+  }
+} catch (error) {
+  console.log('✗')
+  console.error(`\n! Не достукався: ${error.message}`)
+  console.error('  Якщо інтернет на місці — перевір адресу. Ключі все одно запишу.')
 }
 
 if (existsSync(ENV_FILE)) {
