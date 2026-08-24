@@ -12,8 +12,20 @@ REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 OWNER="${REPO%%/*}"
 NAME="${REPO##*/}"
 
+# Секрет у зібраному бандлі означав би, що його побачить кожен відвідувач.
+if git ls-files --error-unmatch .env .env.local >/dev/null 2>&1; then
+  echo "✗ Файл .env або .env.local потрапив під git. Прибери його: git rm --cached .env.local"
+  exit 1
+fi
+
 echo "==> Збираю"
 npm run build >/dev/null
+
+if grep -rqE "sb_secret_|service_role|SUPABASE_SERVICE" dist 2>/dev/null; then
+  echo "✗ У зібраному бандлі знайдено секретний ключ. Публікацію скасовано."
+  echo "  У .env.local має бути ключ anon / publishable, а не service_role."
+  exit 1
+fi
 
 echo "==> Публікую у гілку gh-pages репозиторію $REPO"
 rm -rf .deploy && mkdir .deploy
