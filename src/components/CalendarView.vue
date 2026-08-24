@@ -10,7 +10,7 @@ import {
 import { useViewport } from '../useViewport.js'
 import {
   weekDatesISO, formatWeekRange, formatDayLong, weekdayShort, dayNumber,
-  isWeekend, todayISO, timeToMinutes, minutesToTime, formatTimeRange, formatDuration,
+  isWeekend, todayISO, timeToMinutes, minutesToTime, wrapMinutesToTime, formatTimeRange, formatDuration,
   monthGridISO, formatMonthTitle, isSameMonth, addMonthsISO, WEEKDAY_SHORT_UK, WEEK_ORDER,
 } from '../utils/date.js'
 
@@ -140,6 +140,12 @@ function newEventAt(iso, event) {
   eventDialog.value = { date: iso, time: minutesToTime(snapped) }
 }
 
+/** "19:00–22:15" in a month cell, or just the start when the length is unknown. */
+function compactRange(event) {
+  if (!event.duration) return event.time
+  return `${event.time}–${wrapMinutesToTime(timeToMinutes(event.time) + event.duration)}`
+}
+
 function openTask(id) {
   actions.selectTask(id)
 }
@@ -223,7 +229,7 @@ function openTask(id) {
             @click.stop="eventDialog = { event }"
           >
             <span class="chipline__dot" />
-            <span class="chipline__time">{{ event.time }}</span>
+            <span class="chipline__time">{{ compactRange(event) }}</span>
             <span class="chipline__title">{{ event.title }}</span>
           </button>
 

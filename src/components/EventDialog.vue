@@ -1,9 +1,11 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import BaseModal from './BaseModal.vue'
-import { actions, activeProjects, DURATION_QUICK, DURATION_OPTIONS } from '../store/store.js'
+import { actions, activeProjects, DURATION_QUICK } from '../store/store.js'
 import { t } from '../i18n.js'
-import { formatTimeRange, formatDuration, todayISO, timeToMinutes, minutesToTime } from '../utils/date.js'
+import {
+  formatTimeRange, formatDuration, todayISO, timeToMinutes, wrapMinutesToTime,
+} from '../utils/date.js'
 
 const props = defineProps({
   event: { type: Object, default: null },   // null = create mode
@@ -21,33 +23,41 @@ const notes = ref(props.event?.notes ?? '')
 const titleInput = ref(null)
 
 const preview = computed(() => formatTimeRange(time.value, duration.value))
-const endsAt = computed(() =>
-  duration.value ? minutesToTime(timeToMinutes(time.value) + duration.value) : null,
-)
-
-/** Quick chips plus a dropdown that covers 5 хв … 12 год, and any custom value. */
+/** Quick chips for the usual lengths. */
 const quickLabel = (value) => (value === null ? t.calendar.durationUnknown : formatDuration(value))
 
-const dropdownOptions = computed(() => {
-  const list = [...DURATION_OPTIONS]
-  if (duration.value && !list.includes(duration.value)) list.push(duration.value)
-  return list.sort((a, b) => a - b)
-})
+/**
+ * Duration can be set three ways, whichever is handier: a chip, the hours and
+ * minutes boxes, or simply picking the time the thing ends.
+ */
+const hours = computed(() => (duration.value ? Math.floor(duration.value / 60) : null))
+const minutes = computed(() => (duration.value ? duration.value % 60 : null))
 
-const selectValue = computed(() => (duration.value === null ? 'none' : String(duration.value)))
-
-function onSelect(raw) {
-  duration.value = raw === 'none' ? null : Number(raw)
-}
-function onCustomMinutes(raw) {
-  const n = Number(raw)
-  duration.value = Number.isFinite(n) && n > 0 ? Math.min(1440, Math.round(n)) : null
+function setParts(h, m) {
+  const total = Math.max(0, Math.min(24 * 60, (Number(h) || 0) * 60 + (Number(m) || 0)))
+  duration.value = total || null
 }
 
-onMounted(async () => {
-  await nextTick()
-  titleInput.value?.focus()
-})
+/** "" when the length is unknown; otherwise the clock time it ends at. */
+const endTime = computed(() =>
+  duration.value ? wrapMinutesToTime(timeToMinutes(time.value) + duration.value) : '',
+)
+
+function setEnd(value) {
+  if (!value) {
+    duration.value = null
+    return
+  }
+  const start = timeToMinutes(time.value)
+  let end = timeToMinutes(value)
+  if (end <= start) end += 24 * 60      // an evening event that runs past midnight
+  duration.value = end - start
+}
+
+/** True when the end time lands on the following day. */
+const crossesMidnight = computed(
+  () => Boolean(duration.value) && timeToMinutes(time.value) + duration.value >= 24 * 60,
+)
 
 function submit() {
   const name = title.value.trim()
@@ -114,30 +124,46 @@ function remove() {
       </div>
 
       <div class="dur-row">
-        <select class="select" :value="selectValue" @change="onSelect($event.target.value)">
-          <option value="none">{{ t.calendar.durationUnknown }}</option>
-          <option v-for="m in dropdownOptions" :key="m" :value="String(m)">{{ formatDuration(m) }}</option>
-        </select>
-        <label class="custom">
+        <label class="field">
+          <span class="field__label">{{ t.calendar.end }}</span>
+          <input type="time" step="300" class="input" :value="endTime" @input="setEnd($event.target.value)" />
+        </label>
+
+        <span class="or">{{ t.calendar.or }}</span>
+
+        <label class="field field--num">
+          <span class="field__label">{{ t.calendar.hoursShort }}</span>
           <input
             type="number"
-            class="input input--num"
-            min="1"
-            max="1440"
-            step="5"
-            :value="duration ?? ''"
-            :placeholder="t.calendar.durationCustom"
-            @input="onCustomMinutes($event.target.value)"
+            class="input"
+            min="0"
+            max="24"
+            :value="hours ?? ''"
+            placeholder="0"
+            @input="setParts($event.target.value, minutes)"
           />
-          <span>{{ t.calendar.minutes }}</span>
+        </label>
+        <label class="field field--num">
+          <span class="field__label">{{ t.calendar.minutesShort }}</span>
+          <input
+            type="number"
+            class="input"
+            min="0"
+            max="59"
+            step="5"
+            :value="minutes ?? ''"
+            placeholder="0"
+            @input="setParts(hours, $event.target.value)"
+          />
         </label>
       </div>
 
       <p class="preview">
         <span class="dot" />
         {{ preview }}
-        <span v-if="duration" class="muted">· {{ t.calendar.endsAt }} {{ endsAt }}</span>
+        <span v-if="duration" class="muted">· {{ formatDuration(duration) }}</span>
         <span v-else class="muted">· {{ t.calendar.noDuration }}</span>
+        <span v-if="crossesMidnight" class="muted">· {{ t.calendar.nextDay }}</span>
       </p>
 
       <label class="label" style="margin-top: 16px">{{ t.task.project }}</label>
@@ -176,10 +202,12 @@ function remove() {
 }
 .mini:hover { border-color: var(--accent); color: var(--accent); }
 .mini--on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-.dur-row { display: flex; gap: 8px; margin-top: 8px; }
-.dur-row .select { flex: 1; }
-.custom { display: flex; align-items: center; gap: 6px; color: var(--fg-muted); font-size: 12px; }
-.input--num { width: 74px; text-align: center; }
+.dur-row { display: flex; align-items: flex-end; gap: 8px; margin-top: 10px; }
+.field { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.field--num { flex: 0 0 74px; }
+.field--num .input { text-align: center; }
+.field__label { color: var(--fg-muted); font-size: 11px; font-weight: 600; }
+.or { padding-bottom: 9px; color: var(--fg-subtle); font-size: 12px; }
 
 .preview {
   display: flex;

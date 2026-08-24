@@ -63,17 +63,6 @@ export const EXTEND_PRESETS = [
 /** Chips shown right away in the event dialog; `null` = length unknown. */
 export const DURATION_QUICK = [null, 15, 30, 45, 60, 90, 120]
 
-/**
- * Everything the duration dropdown offers: fine steps for short meetings,
- * coarser ones for long blocks, up to a full 12-hour day.
- */
-export const DURATION_OPTIONS = [
-  5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55,
-  60, 75, 90, 105,
-  120, 150, 180, 210, 240, 270, 300, 330, 360,
-  420, 480, 540, 600, 660, 720,
-]
-
 function makeProject(patch = {}) {
   return {
     id: uid('prj'),
