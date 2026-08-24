@@ -196,11 +196,27 @@ export function formatMonthTitle(iso) {
   return `${month.charAt(0).toUpperCase()}${month.slice(1)} ${date.getFullYear()}`
 }
 
-/** Six Monday-first weeks covering the month that `iso` belongs to. */
+/**
+ * Monday-first weeks covering the month `iso` belongs to — four, five or six
+ * rows, never a whole trailing week that belongs to the next month.
+ */
 export function monthGridISO(iso) {
   const first = `${iso.slice(0, 8)}01`
   const start = startOfWeekISO(first)
-  return Array.from({ length: 42 }, (_, i) => addDaysISO(start, i))
+
+  const firstOfNext = addMonthsISO(first, 1)
+  const lastOfMonth = addDaysISO(firstOfNext, -1)
+
+  const days = []
+  let cursor = start
+  do {
+    for (let i = 0; i < 7; i++) {
+      days.push(cursor)
+      cursor = addDaysISO(cursor, 1)
+    }
+  } while (days[days.length - 1] < lastOfMonth)
+
+  return days
 }
 
 export function isSameMonth(a, b) {

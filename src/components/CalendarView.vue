@@ -14,7 +14,7 @@ import {
   monthGridISO, formatMonthTitle, isSameMonth, addMonthsISO, WEEKDAY_SHORT_UK, WEEK_ORDER,
 } from '../utils/date.js'
 
-const HOUR_HEIGHT = 52          // px per hour
+const HOUR_HEIGHT = 64          // px per hour
 const UNKNOWN_MINUTES = 30      // block height used when a length is unknown
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
@@ -48,7 +48,7 @@ function step(direction) {
   else actions.shiftAnchor(direction * (mode.value === 'day' ? 1 : 7))
 }
 
-const MONTH_VISIBLE = 3   // events listed per month cell before the "+N more" link
+const MONTH_VISIBLE = 4   // events listed per month cell before the "+N more" link
 
 function openDay(iso) {
   actions.setAnchor(iso)
@@ -357,8 +357,8 @@ function openTask(id) {
 
 .cal__head { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); }
 .cal__title { display: flex; align-items: baseline; gap: 10px; }
-.cal__title h1 { margin: 0; font-size: 20px; font-weight: 680; letter-spacing: -0.02em; }
-.cal__range { color: var(--fg-muted); font-size: 13px; }
+.cal__title h1 { margin: 0; font-size: 22px; font-weight: 680; letter-spacing: -0.02em; }
+.cal__range { color: var(--fg-muted); font-size: 14.5px; }
 .muted { color: var(--fg-muted); align-self: center; }
 
 .cal__tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
@@ -372,25 +372,25 @@ function openTask(id) {
   display: grid;
   place-items: center;
 }
-.nav__today { font-size: 13px; font-weight: 600; }
+.nav__today { font-size: 14px; font-weight: 600; }
 .nav__btn:hover, .nav__today:hover { background: var(--bg-hover); color: var(--fg); }
 
 .modes { display: flex; padding: 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-sunken); }
 .mode {
-  height: 26px;
-  padding: 0 12px;
+  height: 30px;
+  padding: 0 14px;
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--fg-muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 .mode--on { background: var(--bg-elevated); color: var(--fg); font-weight: 600; box-shadow: var(--shadow-sm); }
 
 /* --- day header + all-day strip --- */
 .cal__top {
   display: grid;
-  grid-template-columns: 56px repeat(var(--cols), minmax(0, 1fr));
+  grid-template-columns: 68px repeat(var(--cols), minmax(0, 1fr));
   border-bottom: 1px solid var(--border);
   background: var(--bg);
 }
@@ -409,8 +409,8 @@ function openTask(id) {
   background: none;
   color: var(--fg-muted);
 }
-.dayname__dow { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-.dayname__num { color: var(--fg); font-size: 16px; font-weight: 650; }
+.dayname__dow { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.dayname__num { color: var(--fg); font-size: 19px; font-weight: 680; }
 .daycol--today .dayname__num { color: var(--accent); }
 
 .allday { display: flex; flex-direction: column; gap: 3px; min-height: 26px; }
@@ -425,7 +425,7 @@ function openTask(id) {
   border-radius: 5px;
   background: var(--bg-hover);
   color: var(--fg);
-  font-size: 11.5px;
+  font-size: 12.5px;
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -455,7 +455,7 @@ function openTask(id) {
 .cal__grid {
   position: relative;
   display: grid;
-  grid-template-columns: 56px repeat(var(--cols), minmax(0, 1fr));
+  grid-template-columns: 68px repeat(var(--cols), minmax(0, 1fr));
   flex: 1;
   overflow-y: auto;
 }
@@ -463,9 +463,9 @@ function openTask(id) {
 .gutter__hour {
   position: relative;
   height: var(--hour);
-  padding-right: 6px;
-  color: var(--fg-subtle);
-  font-size: 10.5px;
+  padding-right: 8px;
+  color: var(--fg-muted);
+  font-size: 12px;
   text-align: right;
 }
 .gutter__hour span { position: relative; top: -6px; }
@@ -521,7 +521,7 @@ function openTask(id) {
   background: color-mix(in srgb, var(--event-color) 12%, var(--bg-elevated));
 }
 .event--short { flex-direction: row; align-items: center; gap: 6px; }
-.event__time { color: var(--fg-muted); font-size: 10.5px; font-weight: 600; white-space: nowrap; }
+.event__time { color: var(--fg-muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
 .event__q {
   margin-left: 2px;
   padding: 0 4px;
@@ -529,14 +529,14 @@ function openTask(id) {
   background: var(--bg-hover);
 }
 .event__title {
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 600;
   line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.event__len { margin-top: auto; color: var(--fg-muted); font-size: 10.5px; }
+.event__len { margin-top: auto; color: var(--fg-muted); font-size: 12px; }
 
 .month { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .month__names {
@@ -545,9 +545,9 @@ function openTask(id) {
   border-bottom: 1px solid var(--border);
 }
 .month__names span {
-  padding: 7px 10px;
-  color: var(--fg-subtle);
-  font-size: 11px;
+  padding: 9px 12px;
+  color: var(--fg-muted);
+  font-size: 12.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -555,7 +555,7 @@ function openTask(id) {
 .month__grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-auto-rows: minmax(96px, 1fr);
+  grid-auto-rows: minmax(124px, 1fr);
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -563,9 +563,9 @@ function openTask(id) {
 .cell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
-  padding: 4px 5px 6px;
+  padding: 6px 7px 8px;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
@@ -578,23 +578,23 @@ function openTask(id) {
 
 .cell__head { display: flex; align-items: center; justify-content: space-between; }
 .cell__num {
-  min-width: 22px;
-  height: 22px;
-  padding: 0 5px;
+  min-width: 27px;
+  height: 27px;
+  padding: 0 6px;
   border: 0;
   border-radius: 999px;
   background: transparent;
   color: var(--fg);
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 650;
 }
 .cell__num:hover { background: var(--bg-active); }
 .cell--today .cell__num { background: var(--accent); color: var(--accent-fg); }
 .cell__add {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border: 0;
   border-radius: 5px;
   background: transparent;
@@ -608,30 +608,32 @@ function openTask(id) {
 .chipline {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   width: 100%;
-  padding: 2px 5px;
+  padding: 4px 7px;
   border: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   background: color-mix(in srgb, var(--chip-color) 18%, transparent);
   color: var(--fg);
-  font-size: 11px;
+  font-size: 13px;
+  font-weight: 500;
   text-align: left;
   overflow: hidden;
 }
 .chipline:hover { background: color-mix(in srgb, var(--chip-color) 32%, transparent); }
 .chipline--task { background: var(--bg-hover); color: var(--fg-muted); }
 .chipline--done { opacity: 0.5; text-decoration: line-through; }
-.chipline__dot { flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--chip-color); }
+.chipline__dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--chip-color); }
 .chipline__time { flex: none; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 .chipline__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cell__more {
   align-self: flex-start;
-  padding: 1px 4px;
+  padding: 2px 5px;
   border: 0;
   background: none;
-  color: var(--fg-subtle);
-  font-size: 10.5px;
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-weight: 500;
   text-decoration: underline;
 }
 .cell__more:hover { color: var(--accent); }
@@ -646,16 +648,16 @@ function openTask(id) {
   .cal__range { font-size: 12px; }
   .cal__tools { gap: 6px; }
   .nav__btn, .nav__today, .mode { height: 32px; }
-  .month__grid { grid-auto-rows: minmax(74px, 1fr); }
-  .month__names span { padding: 6px 4px; font-size: 10px; }
+  .month__grid { grid-auto-rows: minmax(92px, 1fr); }
+  .month__names span { padding: 7px 5px; font-size: 11.5px; }
   .cell { padding: 3px; }
-  .cell__num { min-width: 20px; height: 20px; font-size: 11.5px; }
+  .cell__num { min-width: 24px; height: 24px; font-size: 13.5px; }
   .cell__add { opacity: 1; }
-  .chipline { font-size: 9.5px; gap: 3px; padding: 1px 3px; }
+  .chipline { font-size: 11.5px; gap: 4px; padding: 2px 5px; }
   .chipline__time { display: none; }
   .allday__add { opacity: 1; }
   .daycol { padding: 5px 4px 6px; }
   .event { padding: 3px 5px; }
-  .event__title { font-size: 11.5px; }
+  .event__title { font-size: 12.5px; }
 }
 </style>
