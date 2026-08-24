@@ -81,9 +81,21 @@ function makeProject(patch = {}) {
     emoji: '📁',
     color: PROJECT_COLORS[0],
     archived: false,
+    order: Date.now(),
     createdAt: Date.now(),
+    updatedAt: Date.now(),
     ...patch,
   }
+}
+
+/** Mark an entity as changed now — the merge picks the newest version. */
+function touch(entity) {
+  if (entity) entity.updatedAt = Date.now()
+}
+
+/** Remember a deletion so the other device does not resurrect the row. */
+function tombstone(id) {
+  state.tombstones[id] = Date.now()
 }
 
 function makeEvent(patch = {}) {
@@ -96,6 +108,7 @@ function makeEvent(patch = {}) {
     projectId: null,
     notes: '',
     createdAt: Date.now(),
+    updatedAt: Date.now(),
     ...patch,
   }
 }
@@ -119,6 +132,7 @@ function makeTask(patch = {}) {
     createdAt: Date.now(),
     completedAt: null,
     order: Date.now(),    // smaller = higher in the list
+    updatedAt: Date.now(),
     ...patch,
   }
 }
@@ -205,6 +219,11 @@ function load() {
     data.projects = (data.projects || []).map((p) => ({ ...makeProject(), ...p }))
     data.tasks = (data.tasks || []).map((task) => ({ ...makeTask(), ...task }))
     data.events = (data.events || []).map((e) => ({ ...makeEvent(), ...e }))
+    // Deletions older than two months no longer need to be remembered.
+    const cutoff = Date.now() - 60 * 24 * 3600 * 1000
+    data.tombstones = Object.fromEntries(
+      Object.entries(data.tombstones || {}).filter(([, ts]) => ts > cutoff),
+    )
     return data
   } catch (err) {
     console.warn('Could not read saved data, starting fresh.', err)
@@ -218,6 +237,8 @@ export const state = reactive({
   projects: persisted.projects,
   tasks: persisted.tasks,
   events: persisted.events || [],
+  /** id -> deletion timestamp, so a delete survives a merge with another device. */
+  tombstones: persisted.tombstones || {},
   ui: {
     view: { kind: 'smart', id: 'all' },  // kind: 'smart' | 'project' | 'calendar' | 'planner'
     calendarMode: 'week',                // 'week' | 'day' inside the calendar
@@ -239,7 +260,12 @@ export const state = reactive({
 
 let saveTimer = null
 watch(
-  () => ({ projects: state.projects, tasks: state.tasks, events: state.events }),
+  () => ({
+    projects: state.projects,
+    tasks: state.tasks,
+    events: state.events,
+    tombstones: state.tombstones,
+  }),
   (data) => {
     clearTimeout(saveTimer)
     saveTimer = setTimeout(() => {
@@ -260,8 +286,14 @@ watch(
 
 /* -------------------------------------------------------------------- getters */
 
-export const activeProjects = computed(() => state.projects.filter((p) => !p.archived))
-export const archivedProjects = computed(() => state.projects.filter((p) => p.archived))
+const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0)
+
+export const activeProjects = computed(() =>
+  state.projects.filter((p) => !p.archived).sort(byOrder),
+)
+export const archivedProjects = computed(() =>
+  state.projects.filter((p) => p.archived).sort(byOrder),
+)
 
 export function projectById(id) {
   return state.projects.find((p) => p.id === id) || null
@@ -441,12 +473,16 @@ export const actions = {
     const t = state.tasks.find((x) => x.id === taskId)
     if (!t || !iso) return
     if (!t.plannedDates) t.plannedDates = []
-    if (!t.plannedDates.includes(iso)) t.plannedDates = [...t.plannedDates, iso].sort()
+    if (!t.plannedDates.includes(iso)) {
+      t.plannedDates = [...t.plannedDates, iso].sort()
+      touch(t)
+    }
   },
   unplanTask(taskId, iso) {
     const t = state.tasks.find((x) => x.id === taskId)
     if (!t) return
     t.plannedDates = (t.plannedDates || []).filter((d) => d !== iso)
+    touch(t)
   },
   togglePlanned(taskId, iso) {
     const t = state.tasks.find((x) => x.id === taskId)
@@ -481,10 +517,13 @@ export const actions = {
       added.push(iso)
     }
     task.plannedDates = [...new Set([start, ...(task.plannedDates || []), ...added])].sort()
+    touch(task)
   },
   clearPlan(taskId) {
     const task = state.tasks.find((x) => x.id === taskId)
-    if (task) task.plannedDates = []
+    if (!task) return
+    task.plannedDates = []
+    touch(task)
   },
 
   /** Drag a task card from one day to another. */
@@ -503,9 +542,12 @@ export const actions = {
   },
   updateEvent(id, patch) {
     const e = state.events.find((x) => x.id === id)
-    if (e) Object.assign(e, patch)
+    if (!e) return
+    Object.assign(e, patch)
+    touch(e)
   },
   deleteEvent(id) {
+    tombstone(id)
     state.events = state.events.filter((e) => e.id !== id)
   },
   requestDeleteEvent(id) {
@@ -532,7 +574,9 @@ export const actions = {
   },
   updateProject(id, patch) {
     const p = projectById(id)
-    if (p) Object.assign(p, patch)
+    if (!p) return
+    Object.assign(p, patch)
+    touch(p)
   },
   archiveProject(id, archived = true) {
     actions.updateProject(id, { archived })
@@ -541,16 +585,24 @@ export const actions = {
     }
   },
   deleteProject(id) {
+    state.tasks.filter((t) => t.projectId === id).forEach((t) => tombstone(t.id))
+    tombstone(id)
     state.tasks = state.tasks.filter((t) => t.projectId !== id)
     state.projects = state.projects.filter((p) => p.id !== id)
     if (state.ui.view.kind === 'project' && state.ui.view.id === id) actions.selectSmart('all')
   },
   moveProject(id, delta) {
-    const i = state.projects.findIndex((p) => p.id === id)
+    const list = activeProjects.value
+    const i = list.findIndex((p) => p.id === id)
     const j = i + delta
-    if (i < 0 || j < 0 || j >= state.projects.length) return
-    const [item] = state.projects.splice(i, 1)
-    state.projects.splice(j, 0, item)
+    if (i < 0 || j < 0 || j >= list.length) return
+    const a = list[i]
+    const b = list[j]
+    const tmp = a.order
+    a.order = b.order
+    b.order = tmp
+    touch(a)
+    touch(b)
   },
 
   /* -- tasks -- */
@@ -569,7 +621,9 @@ export const actions = {
   },
   updateTask(id, patch) {
     const t = state.tasks.find((x) => x.id === id)
-    if (t) Object.assign(t, patch)
+    if (!t) return
+    Object.assign(t, patch)
+    touch(t)
   },
   /**
    * Ticking a repeating task does not close it — it records the completion and
@@ -596,18 +650,23 @@ export const actions = {
       }
       t.completions = (t.completions || 0) + 1
       t.lastCompletedAt = Date.now()
+      touch(t)
       state.ui.rolled = { taskId: id, title: t.title, nextDate: t.dueDate, before }
       return
     }
 
     t.done = !t.done
     t.completedAt = t.done ? Date.now() : null
+    touch(t)
   },
   undoRoll() {
     const rolled = state.ui.rolled
     if (!rolled) return
     const t = state.tasks.find((x) => x.id === rolled.taskId)
-    if (t) Object.assign(t, rolled.before)
+    if (t) {
+      Object.assign(t, rolled.before)
+      touch(t)
+    }
     state.ui.rolled = null
   },
   dismissRoll() {
@@ -623,8 +682,10 @@ export const actions = {
       t.done = false
       t.completedAt = null
     }
+    touch(t)
   },
   deleteTask(id) {
+    tombstone(id)
     state.tasks = state.tasks.filter((t) => t.id !== id)
     if (state.ui.selectedTaskId === id) state.ui.selectedTaskId = null
   },
@@ -687,12 +748,39 @@ export const actions = {
     const tmp = a.order
     a.order = b.order
     b.order = tmp
+    touch(a)
+    touch(b)
     if (state.ui.sort !== 'manual') state.ui.sort = 'manual'
   },
   clearCompleted(projectId = null) {
+    state.tasks
+      .filter((t) => t.done && (!projectId || t.projectId === projectId))
+      .forEach((t) => tombstone(t.id))
     state.tasks = state.tasks.filter(
       (t) => !t.done || (projectId && t.projectId !== projectId),
     )
+  },
+
+  /* -- sync plumbing -- */
+
+  /** Everything worth syncing, as a plain object. */
+  snapshot() {
+    return {
+      projects: JSON.parse(JSON.stringify(state.projects)),
+      tasks: JSON.parse(JSON.stringify(state.tasks)),
+      events: JSON.parse(JSON.stringify(state.events)),
+      tombstones: { ...state.tombstones },
+    }
+  },
+  /** Replace local data with a merged result coming from the sync engine. */
+  applySnapshot(data) {
+    state.projects = (data.projects || []).map((p) => ({ ...makeProject(), ...p }))
+    state.tasks = (data.tasks || []).map((task) => ({ ...makeTask(), ...task }))
+    state.events = (data.events || []).map((e) => ({ ...makeEvent(), ...e }))
+    state.tombstones = { ...(data.tombstones || {}) }
+    if (state.ui.selectedTaskId && !state.tasks.some((x) => x.id === state.ui.selectedTaskId)) {
+      state.ui.selectedTaskId = null
+    }
   },
 
   /* -- data -- */

@@ -4,3 +4,5 @@ dist
 *.local
 build
 .deploy
+.env
+.env.local

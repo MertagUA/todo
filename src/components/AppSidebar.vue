@@ -2,16 +2,19 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import AppIcon from './AppIcon.vue'
 import ProjectDialog from './ProjectDialog.vue'
+import SyncDialog from './SyncDialog.vue'
 import {
   state, actions, activeProjects, archivedProjects,
   smartCounts, openCount, SMART_VIEWS,
 } from '../store/store.js'
 import { t } from '../i18n.js'
+import { sync } from '../sync/engine.js'
 
 const dialog = ref(null)        // null | { mode: 'create' } | { mode: 'edit', project }
 const menuFor = ref(null)       // project id whose "…" menu is open
 const showArchived = ref(false)
 const fileInput = ref(null)
+const syncDialog = ref(false)
 
 function isCurrent(kind, id) {
   return state.ui.view.kind === kind && state.ui.view.id === id
@@ -179,6 +182,10 @@ async function importData(event) {
       >
         <AppIcon :name="state.ui.theme === 'dark' ? 'sun' : 'moon'" />
       </button>
+      <button class="btn btn--ghost btn--icon sync-btn" :title="t.sync.open" @click="syncDialog = true">
+        <AppIcon name="cloud" />
+        <span class="sync-dot" :class="`sync-dot--${sync.user ? sync.status : 'off'}`" />
+      </button>
       <button class="btn btn--ghost btn--icon" :title="t.sidebar.export" @click="exportData">
         <AppIcon name="download" />
       </button>
@@ -188,6 +195,7 @@ async function importData(event) {
       <input ref="fileInput" type="file" accept="application/json" hidden @change="importData" />
     </footer>
 
+    <SyncDialog v-if="syncDialog" @close="syncDialog = false" />
     <ProjectDialog
       v-if="dialog"
       :project="dialog.mode === 'edit' ? dialog.project : null"
@@ -354,6 +362,22 @@ async function importData(event) {
   .row__more { opacity: 1; width: 30px; height: 30px; }
   .sidebar { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
 }
+
+.sync-btn { position: relative; }
+.sync-dot {
+  position: absolute;
+  right: 4px;
+  bottom: 5px;
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid var(--bg-sunken);
+  border-radius: 50%;
+  background: var(--fg-subtle);
+}
+.sync-dot--synced { background: #22c55e; }
+.sync-dot--syncing { background: var(--accent); }
+.sync-dot--error { background: var(--danger); }
+.sync-dot--offline { background: var(--prio-medium); }
 
 .foot {
   display: flex;

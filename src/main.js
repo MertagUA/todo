@@ -1,8 +1,12 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import './style.css'
+import { startSync } from './sync/engine.js'
 
 createApp(App).mount('#app')
+
+// Cross-device sync, if Supabase keys were provided at build time.
+startSync()
 
 // Offline support for the hosted version; the local launcher does not need it.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
